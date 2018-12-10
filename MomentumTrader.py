@@ -40,7 +40,13 @@ class MomentumTrader():
         reduction = 1 - (self.inv / self.inv_limit)**self.h
         change = (signal.market_price[-1] - signal.market_price[-self.l]) / signal.market_price[-self.l]
         d = self.omega * change * reduction
-        return d
+        if d < 0:
+            side = Side.ASK
+        elif d > 0:
+            side = Side.BID
+        else:
+            side = Side.BID
+        return d, side
     
     
     def process_signal(self, time, signal):
