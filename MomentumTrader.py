@@ -9,40 +9,41 @@ Created on Thu Dec  6 14:08:28 2018
 """Momentum Trader"""
 
 import random
+from shared import Side, OType, TType
 
 class MomentumTrader():
     
-    def __init__(self, **kwargs):
-        self.Lambda = kwargs["pmt"]
-        self.omega = kwargs["mom_omega"]
-        self.h = kwargs["mom_shape"]
-        self.inv_limit = kwargs["mom_inv_limit"]
+    trader_type = TType.MomentumTrader
+    
+    def __init__(self, mt_id, omega, inv_limit, time_window, h):
+        self.name = mt_id
+        self.omega = omega
+        self.inv_limit = inv_limit
         self.inv = random.randint(0, self.inv_limit)
-        self.l = kwargs["mom_time_window"]
+        self.l = time_window
+        self.h = h
+        self._quote_sequence = 0
     
     
     
-    def can_i_trade(self):
-        if random.random() < self.Lambda:
-            return 1
-        else:
-            return 0
-    
-    
-    def get_price_change(self):
-        p = self.exchange.price_hist[-1]
-        pl = self.exchange.price_hist[-self.l]
-        change = (p - pl) / pl
-        return change
+    def _make_add_quote(self, time, side, price, size):
+        '''Make one add quote (dict)'''
+        self._quote_sequence += 1
+        return {'order_id': self._quote_sequence, 'trader_id': self.name, 
+                'timestamp': time, 'type': OType.ADD, 'quantity': size, 
+                'side': side, 'price': price}
+
     
     
     
-    def set_demand(self):
-        if self.can_i_trade() == 1:
-            reduction = 1 - (self.inv / self.inv_limit)**self.h
-            change = self.get_price_change()
-            d = self.omega * change * reduction
-            return d
-        else:
-            return 0
+    def set_demand(self, signal):
+        reduction = 1 - (self.inv / self.inv_limit)**self.h
+        change = (signal.market_price[-1] - signal.market_price[-self.l]) / signal.market_price[-self.l]
+        d = self.omega * change * reduction
+        return d
+    
+    
+    def process_signal(self, time, signal):
+        size, buy_sell = self.set_demand(signal)
+        return self._make_add_quote(time, buy_sell, 200000, size)
         
