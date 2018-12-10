@@ -154,6 +154,7 @@ class Runner:
         top_of_book = self.exchange.report_top_of_book(1)
         traders = self.traders
         for current_time in range(1, self.run_steps):
+            print(current_time)
             self.signal.demand_updated = False
             for t in traders:
                 if t.trader_type == TType.NoiseTrader:
