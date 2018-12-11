@@ -52,14 +52,20 @@ class FundamentalTrader():
         elif self.value > ask: # value is above current market value, so buy
             d = self.omega * (self.value - ask)
             side = Side.BID
-            return floor(abs(d)), side
+            return floor(d), side
         else: # value is below current market value, so sell
             d = self.omega * (self.value - bid)
             side = Side.ASK
-            return floor(abs(d)), side
+            d = floor(abs(d)), side
+            d = -1 * d
+            return d, side
+            
     
     
     def process_signal(self, time, signal):
         size, side = self.set_demand(signal)
-        return self._make_add_quote(time, side, 200000, size)
+        if side == Side.BID:
+            return self._make_add_quote(time, side, 200000, size)
+        else:
+            return self._make_add_quote(time, side, 0, size)
         

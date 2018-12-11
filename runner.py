@@ -14,6 +14,8 @@ from FundamentalTrader import FundamentalTrader
 from MomentumTrader import MomentumTrader
 from Signal import Signal
 
+ex = 1
+
 class Runner:
     
     def __init__(self, h5filename='test.h5', prime1=20, run_steps=10000, write_interval=5000, **kwargs):
@@ -96,8 +98,11 @@ class Runner:
         ''' MM id starts with 4'''
         mm_ids = [4000 + i for i in range(numMMs)]
         #self.liquidity_providers.update({4000: jumper})
-        return [MarketMaker(mm_id=mm, omega=KatRisk, gamma=gamma, kap=K, a=alpha, r=reduction,
-                            n=n, s=s, d=delta, l=window, c=0.03) for mm in mm_ids]
+        maker_list = [MarketMaker(mm_id=mm, omega=KatRisk, gamma=gamma, kap=K, 
+                                  a=alpha, r=reduction, n=n, s=s, d=delta, 
+                                  l=window, c=0.03) for mm in mm_ids]
+        self.liquidity_providers.update(dict(zip(mm_ids, maker_list)))
+        return maker_list
 
     
     def makeAll(self):
@@ -117,12 +122,15 @@ class Runner:
     def seedOrderbook(self):
         seed_mm = MarketMaker(9999, 1, 0.05, 10000, 0.15, 1000, 4, 0.00001, 0.0001, 10, 0.03)
         self.liquidity_providers.update({9999: seed_mm})
+        oid = 1
         for _ in range(100):
             ba = round(random.uniform(50., 50.1), 2)
             bb = round(random.uniform(49.9, 49.99), 2)
-            qask = {'order_id': 0, 'trader_id': 9999, 'timestamp': 0, 'type': OType.ADD, 
+            
+            qask = {'order_id': oid, 'trader_id': 9999, 'timestamp': 0, 'type': OType.ADD, 
                     'quantity': 1, 'side': Side.ASK, 'price': ba}
-            qbid = {'order_id': 0, 'trader_id': 9999, 'timestamp': 0, 'type': OType.ADD,
+            oid += 1
+            qbid = {'order_id': oid, 'trader_id': 9999, 'timestamp': 0, 'type': OType.ADD,
                     'quantity': 1, 'side': Side.BID, 'price': bb}
             seed_mm.local_book[1] = qask
             self.exchange.add_order_to_book(qask)
@@ -131,6 +139,7 @@ class Runner:
             self.exchange.add_order_to_book(qbid)
             self.exchange.add_order_to_history(qbid)
             self.signal.calculate_mid_price(self.exchange.report_top_of_book(0))
+            oid += 1
         
 #    def makeSetup(self, prime1, lambda0):
 #        top_of_book = self.exchange.report_top_of_book(0)
@@ -152,34 +161,19 @@ class Runner:
     
     def runMcs(self, prime1, write_interval):
         top_of_book = self.exchange.report_top_of_book(1)
+        self.signal.calculate_mid_price(top_of_book)
         traders = self.traders
         for current_time in range(1, self.run_steps):
-            print(current_time)
+            print("time ", current_time)
             self.signal.demand_updated = False
             for t in traders:
                 if t.trader_type == TType.NoiseTrader:
                     if random.random() <= self.Lambda_nt:
                         order = t.process_signal(current_time)
+                        print("noise trader: order {}, quantity {}, side {}, price {}".format(order["order_id"], order["quantity"], order["side"], order["price"]))
                         self.exchange.process_order(order)
-                        top_of_book = self.exchange.report_top_of_book(current_time)
-                        self.signal.calculate_mid_price(top_of_book)
-                        self.signal.calculate_volatility()
-                        if self.signal.demand_updated:
-                            self.signal.demand[-1] += order["quantity"]
-                        else:
-                            self.signal.demand.append(order["quantity"])
-                            self.signal.demand_updated = True
-#                    t.bulk_cancel(current_time)
-#                    if t.cancel_collector:
-#                        self.doCancels(t)
-#                        top_of_book = self.exchange.report_top_of_book(current_time)
-                elif t.trader_type == TType.FundamentalTrader:
-                    if random.random() <= self.Lambda_ft:
-                        order = t.process_signal(current_time, self.signal)
-                        if order is None:
-                            pass
-                        else:
-                            self.exchange.process_order(order)
+                        if self.exchange.traded:
+                            self.confirmTrades()
                             top_of_book = self.exchange.report_top_of_book(current_time)
                             self.signal.calculate_mid_price(top_of_book)
                             self.signal.calculate_volatility()
@@ -192,30 +186,53 @@ class Runner:
 #                    if t.cancel_collector:
 #                        self.doCancels(t)
 #                        top_of_book = self.exchange.report_top_of_book(current_time)
+                elif t.trader_type == TType.FundamentalTrader:
+                    if random.random() <= self.Lambda_ft:
+                        order = t.process_signal(current_time, self.signal)
+                        if order is None:
+                            pass
+                        else:
+                            print("fundamental trader: order {}, quantity {}, side {}, price {}".format(order["order_id"], order["quantity"], order["side"], order["price"]))
+                            self.exchange.process_order(order)
+                            if self.exchange.traded:
+                                self.confirmTrades()
+                                top_of_book = self.exchange.report_top_of_book(current_time)
+                                self.signal.calculate_mid_price(top_of_book)
+                                self.signal.calculate_volatility()
+                                if self.signal.demand_updated:
+                                    self.signal.demand[-1] += order["quantity"]
+                                else:
+                                    self.signal.demand.append(order["quantity"])
+                                    self.signal.demand_updated = True
+#                    t.bulk_cancel(current_time)
+#                    if t.cancel_collector:
+#                        self.doCancels(t)
+#                        top_of_book = self.exchange.report_top_of_book(current_time)
                 elif t.trader_type == TType.MomentumTrader:
                     if random.random() <= self.Lambda_mt:
                         order = t.process_signal(current_time, self.signal)
-                        self.exchange.process_order(order)
-                        if self.exchange.traded:
-                            self.confirmTrades()
-                            top_of_book = self.exchange.report_top_of_book(current_time)
-                            self.signal.calculate_mid_price(top_of_book)
-                            self.signal.calculate_volatility()
-                            if self.signal.demand_updated:
-                                self.signal.demand[-1] += order["quantity"]
-                            else:
-                                self.signal.demand.append(order["quantity"])
+                        if order is None:
+                            pass
+                        else:
+                            print("momentum trader: order {}, quantity {}, side {}, price {}".format(order["order_id"], order["quantity"], order["side"], order["price"]))
+                            self.exchange.process_order(order)
+                            if self.exchange.traded:
+                                self.confirmTrades()
+                                top_of_book = self.exchange.report_top_of_book(current_time)
+                                self.signal.calculate_mid_price(top_of_book)
+                                self.signal.calculate_volatility()
+                                if self.signal.demand_updated:
+                                    self.signal.demand[-1] += order["quantity"]
+                                else:
+                                    self.signal.demand.append(order["quantity"])
                 else: # Trader is Market Maker
                     if random.random() <= self.Lambda_mm:
                         quotes = t.process_signal(current_time, self.signal)
                         for q in quotes:
                             self.exchange.process_order(q)
                         top_of_book = self.exchange.report_top_of_book(current_time)
-                        if self.exchange.traded:
-                            self.confirmTrades()
-                            top_of_book = self.exchange.report_top_of_book(current_time)
-                            self.signal.calculate_mid_price(top_of_book)
-                            self.signal.calculate_volatility()
+                        self.signal.calculate_mid_price(top_of_book)
+                        self.signal.calculate_volatility()
             if not current_time % write_interval:
                 self.exchange.order_history_to_h5(self.h5filename)
                 self.exchange.sip_to_h5(self.h5filename)
@@ -237,7 +254,7 @@ if __name__ == '__main__':
     print(time.time())
     
     settings = {"Noise": True, "numNoise": 1, "NoiseSigma": 50, "Lambda_nt": 0.02,
-                "Fundamental": True, "numFund": 1, "omega_Fund": 500, "FundSigma": 0.0000156, "Lambda_ft": 0.1,
+                "Fundamental": True, "numFund": 1, "omega_Fund": 500, "FundSigma": 0.156, "Lambda_ft": 0.1,
                 "Momentum": True, "numMom": 1, "omega_Mom": 50000, "MomInvLim": 300, "MomTimeWindow": 10, "shapeMom": 4, "Lambda_mt": 0.2,
                 "MarketMaker": True, "numMMs": 1, "KatRisk": 0.12, "MMgamma": 3, 
                 "K": 10000, "MMa": 0.15, "MMr": 1000, "MMn": 4, "MMs": 0.00001, 

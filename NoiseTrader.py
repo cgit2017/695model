@@ -39,15 +39,20 @@ class NoiseTrader():
     
     def set_demand(self):
         size = random.normalvariate(mu=0, sigma=self.sigma)
-        size = floor(abs(size))
         if random.random() > 0.5:
             buy_sell = Side.BID
+            size = floor(size)
         else:
             buy_sell = Side.ASK
+            size = floor(abs(size))
+            size = -1 * size
         return size, buy_sell
     
     
     def process_signal(self, time):
         size, buy_sell = self.set_demand()
-        return self._make_add_quote(time, buy_sell, 200000, size)
+        if buy_sell == Side.BID:
+            return self._make_add_quote(time, buy_sell, 200000, size)
+        else:
+            return self._make_add_quote(time, buy_sell, 0, size)
         

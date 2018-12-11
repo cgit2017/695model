@@ -125,11 +125,13 @@ class Orderbook(object):
                     self._match_trade(order)
                 else:
                     self.add_order_to_book(order)
+                    print(order["order_id"])
             else: #order['side'] == 'sell'
                 if order['price'] <= self._bid_book_prices[-1]:
                     self._match_trade(order)
                 else:
                     self.add_order_to_book(order)
+                    print(order["order_id"])
         else:
             ex_id = self._lookup[order['trader_id']][order['order_id']]
             if order['type'] == OType.CANCEL:

@@ -30,4 +30,4 @@ class Signal():
         self.ask = tob["best_ask"]
         self.bid = tob["best_bid"]
         mid_price = (self.ask + self.bid) / 2
-        self.market_price.append(mid_price)
+        self.market_price.append(round(mid_price, 2))

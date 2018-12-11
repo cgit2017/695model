@@ -30,6 +30,7 @@ class MarketMaker():
         self.inv_limit = 0.5 * self.kapital
         """Starting inventory held, norm dist around 0"""
         self.inv = [random.normalvariate(mu=0, sigma=0.01) * self.inv_limit for _ in range(10)]
+        self.inv = list(map(int, self.inv))
         """Decay strength of MM price signal"""
         self.alpha = a
         """Reduction for adverse selection"""
@@ -210,6 +211,14 @@ class MarketMaker():
             ask += 0.01
             bid += 0.01
         return quote_list
+    
+
+    def confirm_trade_local(self, confirm):
+        previous_inv = self.inv[-1]
+        if confirm["side"] == Side.ASK:
+            self.inv.append(previous_inv - confirm["quantity"])
+        else:
+            self.inv.append(previous_inv + confirm["quantity"])
         
         
         
