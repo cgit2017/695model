@@ -39,7 +39,7 @@ class MomentumTrader():
     
     def set_demand(self, signal):
         reduction = 1 - (self.inv / self.inv_limit)**self.h
-        change = (signal.market_price[-1] - signal.market_price[-self.l]) / signal.market_price[-self.l]
+        change = (signal.mid_price[-1] - signal.mid_price[-self.l]) / signal.mid_price[-self.l]
         d = self.omega * change * reduction
         if d < 0:
             side = Side.ASK
@@ -58,7 +58,7 @@ class MomentumTrader():
         if size == 0:
             return None
         if buy_sell == Side.BID:
-            return self._make_add_quote(time, buy_sell, 200000, size)
+            return self._make_add_quote(time, buy_sell, 200000, abs(size))
         else:
-            return self._make_add_quote(time, buy_sell, 0, size)
+            return self._make_add_quote(time, buy_sell, 0, abs(size))
         

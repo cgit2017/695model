@@ -243,4 +243,6 @@ class Orderbook(object):
                'best_ask': best_ask_price, 'bid_size': best_bid_size, 
                'ask_size': best_ask_size}
         self._sip_collector.append(tob)
+        self.signal.tob = tob
+        print(self.signal.tob)
         return tob

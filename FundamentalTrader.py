@@ -21,7 +21,7 @@ class FundamentalTrader():
         self.name = f
         self.omega = omega
         self.sigma = sigma
-        self.value = 50
+        self.value = 50.
         self._quote_sequence = 0
         
     
@@ -49,14 +49,14 @@ class FundamentalTrader():
         bid = signal.bid
         if bid <= self.value <= ask: # value is between bid and ask
             return 0, 0
-        elif self.value > ask: # value is above current market value, so buy
-            d = self.omega * (self.value - ask)
+        if self.value > ask: # value is above current market value, so buy
+            d = self.omega * (self.value - ask) # The more undervalued you think the stock is the more demand
             side = Side.BID
             return floor(d), side
-        else: # value is below current market value, so sell
+        if self.value < bid: # value is below current market value, so sell
             d = self.omega * (self.value - bid)
             side = Side.ASK
-            d = floor(abs(d)), side
+            d = floor(abs(d))
             d = -1 * d
             return d, side
             
@@ -64,8 +64,13 @@ class FundamentalTrader():
     
     def process_signal(self, time, signal):
         size, side = self.set_demand(signal)
-        if side == Side.BID:
-            return self._make_add_quote(time, side, 200000, size)
+        if size == 0:
+            return None
         else:
-            return self._make_add_quote(time, side, 0, size)
+            if side == Side.BID:
+                order = self._make_add_quote(time, side, 200000, abs(size))
+                return order
+            else:
+                order = self._make_add_quote(time, side, 0, abs(size))
+                return order
         

@@ -18,7 +18,7 @@ ex = 1
 
 class Runner:
     
-    def __init__(self, h5filename='test.h5', prime1=20, run_steps=10000, write_interval=5000, **kwargs):
+    def __init__(self, h5filename='test.h5', prime1=20, run_steps=10000, write_interval=50, **kwargs):
         self.signal = Signal()
         self.exchange = orderbook.Orderbook(self.signal)
         self.h5filename = h5filename
@@ -123,15 +123,15 @@ class Runner:
         seed_mm = MarketMaker(9999, 1, 0.05, 10000, 0.15, 1000, 4, 0.00001, 0.0001, 10, 0.03)
         self.liquidity_providers.update({9999: seed_mm})
         oid = 1
-        for _ in range(100):
-            ba = round(random.uniform(50., 50.1), 2)
-            bb = round(random.uniform(49.9, 49.99), 2)
+        for _ in range(10):
+            ba = round(random.uniform(50., 50.02), 2)
+            bb = round(random.uniform(49.98, 49.99), 2)
             
             qask = {'order_id': oid, 'trader_id': 9999, 'timestamp': 0, 'type': OType.ADD, 
-                    'quantity': 1, 'side': Side.ASK, 'price': ba}
+                    'quantity': 5, 'side': Side.ASK, 'price': ba}
             oid += 1
             qbid = {'order_id': oid, 'trader_id': 9999, 'timestamp': 0, 'type': OType.ADD,
-                    'quantity': 1, 'side': Side.BID, 'price': bb}
+                    'quantity': 5, 'side': Side.BID, 'price': bb}
             seed_mm.local_book[1] = qask
             self.exchange.add_order_to_book(qask)
             self.exchange.add_order_to_history(qask)
@@ -253,15 +253,20 @@ if __name__ == '__main__':
     
     print(time.time())
     
-    settings = {"Noise": True, "numNoise": 1, "NoiseSigma": 50, "Lambda_nt": 0.02,
-                "Fundamental": True, "numFund": 1, "omega_Fund": 500, "FundSigma": 0.156, "Lambda_ft": 0.1,
+    settings = {"Noise": True, "numNoise": 1, "NoiseSigma": 50, "Lambda_nt": 0.2,
+                "Fundamental": True, "numFund": 1, "omega_Fund": 500, "FundSigma": 0.0156, "Lambda_ft": 0.1,
                 "Momentum": True, "numMom": 1, "omega_Mom": 50000, "MomInvLim": 300, "MomTimeWindow": 10, "shapeMom": 4, "Lambda_mt": 0.2,
                 "MarketMaker": True, "numMMs": 1, "KatRisk": 0.12, "MMgamma": 3, 
-                "K": 10000, "MMa": 0.15, "MMr": 1000, "MMn": 4, "MMs": 0.00001, 
+                "K": 1000, "MMa": 0.15, "MMr": 1000, "MMn": 2, "MMs": 0.00001, 
                 "MMdelta": 0.0001, "MMwindow": 10, "Lambda_mm": 0.2, "MMc": 0.01
                 }
     
     r = Runner(**settings)
+    
+    tob = pd.read_hdf("test.h5", key="tob")
+    tob.reset_index(drop=True, inplace=True)
+    orders = pd.read_hdf("test.h5", key="orders")
+    orders.reset_index(drop=True, inplace=True)
     
 #    for j in range(51, 52):
 #        random.seed(j)

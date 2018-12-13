@@ -12,6 +12,7 @@ Market Maker
 
 import random
 from shared import Side, OType, TType
+from math import floor
 
 class MarketMaker():
     
@@ -21,7 +22,6 @@ class MarketMaker():
         self.name = mm_id
         """initial MM capital"""
         self.kapital = kap
-        self.position = 0
         """percent of capital allowed at risk"""
         self.max_kap_at_risk = omega
         """MM price sensitivity to realized volatility"""
@@ -75,16 +75,19 @@ class MarketMaker():
         curr_inv = self.inv[-1]
         
         if side == Side.BID:
-            return (curr_inv - max_inv) / max_inv
+            adjustment = (curr_inv - max_inv) / max_inv
+            return adjustment
         else:
-            return (curr_inv + max_inv) / max_inv
+            adjustment = (curr_inv + max_inv) / max_inv
+            return adjustment
     
     
     """Determine reduction to take adverse selection into account"""
     def reduce_for_adv_sel(self, price1, pricel):
         p1 = price1
         pl = pricel
-        return self.r * (1 - abs(p1 / pl))
+        reduction = self.r * abs(1 - (p1 / pl))
+        return max([reduction, 1])
     
     
     """Get bid and ask sizes
@@ -93,9 +96,12 @@ class MarketMaker():
     def get_ab_q(self, price1, pricel):
         total_q = self.getQ()
         reduction = self.reduce_for_adv_sel(price1, pricel)
-        q_bid = ((0.5 * total_q) * (1/ self.n) * self.adjust_for_inv(Side.BID) * reduction)
-        q_ask = ((0.5 * total_q) * (1/ self.n) * self.adjust_for_inv(Side.ASK) * reduction)
-        return q_ask, q_bid
+        bid_adj = self.adjust_for_inv(Side.BID)
+        ask_adj = self.adjust_for_inv(Side.ASK)
+        q_bid = ((0.5 * total_q) * (1/ self.n) * bid_adj * reduction)
+        q_bid = abs(q_bid)
+        q_ask = ((0.5 * total_q) * (1/ self.n) * ask_adj * reduction)
+        return floor(q_ask), floor(q_bid)
     
     """    
 *******************************************************************************
@@ -155,12 +161,14 @@ class MarketMaker():
     """Determine desired mid price based on market mid price
     observed price impact from market orders and inventory risk"""
     def set_mm_mid_price(self, signal):
-        mp = signal.market_price[-1]
+        mp = signal.mid_price[-1]
         demand = signal.demand[-1]
         i = self.indicator()
+        self.i.append(i)
         pib = self.price_impact_buy(demand)
         pia = self.price_impact_sell(demand)
-        personal_mp = mp + pib + pia + i
+        #personal_mp = mp + pib + pia + i
+        personal_mp = mp - i
         return personal_mp
 
 
@@ -176,8 +184,13 @@ class MarketMaker():
         """market wide mid price volatility in last 10 periods"""
         signal.calculate_volatility()
         volatility = signal.volatility
-        min_ask = pmp + min([self.gamma * volatility, self.zeta]) + (self.i[-1] * (10**-10))
-        max_bid = pmp - min([self.gamma * volatility, self.zeta]) - (self.i[-1] * (10**-10))
+        min_ask = round(pmp + max([self.gamma * volatility, self.zeta]) + (self.i[-1] * (10**-10)), 2)
+        max_bid = round(pmp - max([self.gamma * volatility, self.zeta]) - (self.i[-1] * (10**-10)), 2)
+        
+        if min_ask <= signal.tob["best_bid"]:
+            min_ask = signal.tob["best_bid"] + (self.zeta)
+        if max_bid >= signal.tob["best_ask"]:
+            max_bid = signal.tob["best_ask"] - (self.zeta)
         
         return round(min_ask, 2), round(max_bid, 2)
     
@@ -199,19 +212,28 @@ class MarketMaker():
         
 
     def process_signal(self, time, signal):
+        if time > 100:
+            x = time
         demand = signal.demand[-1]
-        price1 = signal.market_price[-1]
-        pricel = signal.market_price[-self.l]
-        ask, bid = self.set_spread(signal, demand)
+        price1 = signal.mid_price[-1]
+        pricel = signal.mid_price[-self.l]
+        best_ask, best_bid = signal.report_ask_bid()
+        my_ask, my_bid = self.set_spread(signal, demand)
         q_ask, q_bid = self.get_ab_q(price1, pricel)
         quote_list = []
         for n in range(self.n):
-            quote_list.append(self._make_add_quote(time, Side.ASK, ask, q_ask))
-            quote_list.append(self._make_add_quote(time, Side.BID, bid, q_bid))
-            ask += 0.01
-            bid += 0.01
+            quote_list.append(self._make_add_quote(time, Side.ASK, my_ask, abs(q_ask)))
+            quote_list.append(self._make_add_quote(time, Side.BID, my_bid, abs(q_bid)))
+            my_ask += 0.01
+            my_ask = round(my_ask, 2)
+            my_bid -= 0.01
+            my_bid = round(my_bid, 2)
         return quote_list
     
+
+
+
+
 
     def confirm_trade_local(self, confirm):
         previous_inv = self.inv[-1]
@@ -219,9 +241,11 @@ class MarketMaker():
             self.inv.append(previous_inv - confirm["quantity"])
         else:
             self.inv.append(previous_inv + confirm["quantity"])
+
         
         
         
+
         
         
 
