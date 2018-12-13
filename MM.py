@@ -234,13 +234,13 @@ class MarketMaker():
 
 
 
-
     def confirm_trade_local(self, confirm):
         previous_inv = self.inv[-1]
         if confirm["side"] == Side.ASK:
             self.inv.append(previous_inv - confirm["quantity"])
         else:
             self.inv.append(previous_inv + confirm["quantity"])
+            
 
         
         
