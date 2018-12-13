@@ -257,7 +257,7 @@ if __name__ == '__main__':
                 "Fundamental": True, "numFund": 1, "omega_Fund": 500, "FundSigma": 0.0156, "Lambda_ft": 0.1,
                 "Momentum": True, "numMom": 1, "omega_Mom": 50000, "MomInvLim": 300, "MomTimeWindow": 10, "shapeMom": 4, "Lambda_mt": 0.2,
                 "MarketMaker": True, "numMMs": 1, "KatRisk": 0.12, "MMgamma": 3, 
-                "K": 1000, "MMa": 0.15, "MMr": 1000, "MMn": 2, "MMs": 0.00001, 
+                "K": 1000, "MMa": 0.15, "MMr": 1000, "MMn": 4, "MMs": 0.00001, 
                 "MMdelta": 0.0001, "MMwindow": 10, "Lambda_mm": 0.2, "MMc": 0.01
                 }
     
