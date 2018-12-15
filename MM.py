@@ -76,10 +76,24 @@ class MarketMaker():
         
         if side == Side.BID:
             adjustment = (curr_inv - max_inv) / max_inv
-            return adjustment
+            # If inv is possitive and greater than max_inv
+            if curr_inv > max_inv:
+                return 0
+            # if inv is negative and less than -max_inv
+            elif curr_inv < -max_inv:
+                return 2
+            else:
+                return adjustment
         else:
             adjustment = (curr_inv + max_inv) / max_inv
-            return adjustment
+            # if inv is negative and less than -max_inv
+            if curr_inv < -max_inv:
+                return 0
+            # if inv is possitive and greater than max_inv
+            elif curr_inv > max_inv:
+                return 2
+            else:
+                return adjustment
     
     
     """Determine reduction to take adverse selection into account"""
@@ -228,12 +242,16 @@ class MarketMaker():
         q_ask, q_bid = self.get_ab_q(price1, pricel)
         quote_list = []
         for n in range(self.n):
-            quote_list.append(self._make_add_quote(time, Side.ASK, my_ask, abs(q_ask)))
-            quote_list.append(self._make_add_quote(time, Side.BID, my_bid, abs(q_bid)))
+            if abs(q_ask) > 0:
+                quote_list.append(self._make_add_quote(time, Side.ASK, my_ask, abs(q_ask)))
+            if abs(q_bid) > 0:
+                quote_list.append(self._make_add_quote(time, Side.BID, my_bid, abs(q_bid)))
             my_ask += 0.01
             my_ask = round(my_ask, 2)
+            q_ask -= floor(q_ask * 0.25)
             my_bid -= 0.01
             my_bid = round(my_bid, 2)
+            q_bid -= floor(q_bid * 0.25)
         return quote_list
     
 
