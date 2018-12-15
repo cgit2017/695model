@@ -123,7 +123,7 @@ class Runner:
         seed_mm = MarketMaker(9999, 1, 0.05, 10000, 0.15, 1000, 4, 0.00001, 0.0001, 10, 0.03)
         self.liquidity_providers.update({9999: seed_mm})
         oid = 1
-        for _ in range(10):
+        for _ in range(20):
             ba = round(random.uniform(50., 50.02), 2)
             bb = round(random.uniform(49.98, 49.99), 2)
             
@@ -257,7 +257,7 @@ if __name__ == '__main__':
                 "Fundamental": True, "numFund": 1, "omega_Fund": 500, "FundSigma": 0.0156, "Lambda_ft": 0.1,
                 "Momentum": True, "numMom": 1, "omega_Mom": 50000, "MomInvLim": 300, "MomTimeWindow": 10, "shapeMom": 4, "Lambda_mt": 0.2,
                 "MarketMaker": True, "numMMs": 1, "KatRisk": 0.12, "MMgamma": 3, 
-                "K": 1000, "MMa": 0.15, "MMr": 1000, "MMn": 4, "MMs": 0.00001, 
+                "K": 2000, "MMa": 0.15, "MMr": 1000, "MMn": 4, "MMs": 0.00001, 
                 "MMdelta": 0.0001, "MMwindow": 10, "Lambda_mm": 0.2, "MMc": 0.01
                 }
     

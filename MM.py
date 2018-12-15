@@ -86,8 +86,11 @@ class MarketMaker():
     def reduce_for_adv_sel(self, price1, pricel):
         p1 = price1
         pl = pricel
-        reduction = self.r * abs(1 - (p1 / pl))
-        return max([reduction, 1])
+        reduction = min(self.r * abs(1 - (p1 / pl)), 1)
+        if reduction == 0:
+            return 1
+        else:
+            return reduction
     
     
     """Get bid and ask sizes
@@ -98,9 +101,11 @@ class MarketMaker():
         reduction = self.reduce_for_adv_sel(price1, pricel)
         bid_adj = self.adjust_for_inv(Side.BID)
         ask_adj = self.adjust_for_inv(Side.ASK)
+        print("bid adj=", bid_adj, " ask_adj=", ask_adj)
         q_bid = ((0.5 * total_q) * (1/ self.n) * bid_adj * reduction)
         q_bid = abs(q_bid)
         q_ask = ((0.5 * total_q) * (1/ self.n) * ask_adj * reduction)
+        q_ask = abs(q_ask)
         return floor(q_ask), floor(q_bid)
     
     """    
@@ -184,9 +189,10 @@ class MarketMaker():
         """market wide mid price volatility in last 10 periods"""
         signal.calculate_volatility()
         volatility = signal.volatility
-        min_ask = round(pmp + max([self.gamma * volatility, self.zeta]) + (self.i[-1] * (10**-10)), 2)
-        max_bid = round(pmp - max([self.gamma * volatility, self.zeta]) - (self.i[-1] * (10**-10)), 2)
-        
+#        min_ask = round(pmp + max([self.gamma * volatility, self.zeta]) + (self.i[-1] * (10**-10)), 2)
+#        max_bid = round(pmp - max([self.gamma * volatility, self.zeta]) - (self.i[-1] * (10**-10)), 2)
+        min_ask = round(pmp + max([self.gamma * volatility, self.zeta]) + self.i[-1], 2)
+        max_bid = round(pmp - max([self.gamma * volatility, self.zeta]) - self.i[-1], 2)
         if min_ask <= signal.tob["best_bid"]:
             min_ask = signal.tob["best_bid"] + (self.zeta)
         if max_bid >= signal.tob["best_ask"]:
@@ -237,9 +243,9 @@ class MarketMaker():
     def confirm_trade_local(self, confirm):
         previous_inv = self.inv[-1]
         if confirm["side"] == Side.ASK:
-            self.inv.append(previous_inv - confirm["quantity"])
+            self.inv.append(previous_inv - confirm["trade_q"])
         else:
-            self.inv.append(previous_inv + confirm["quantity"])
+            self.inv.append(previous_inv + confirm["trade_q"])
             
 
         

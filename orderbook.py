@@ -109,9 +109,9 @@ class Orderbook(object):
                                 'quantity': quantity, 'side': side.value})
     
 
-    def _confirm_trade(self, timestamp, order_side, order_quantity, order_id, order_price, trader_id):
+    def _confirm_trade(self, timestamp, trade_q, order_side, order_quantity, order_id, order_price, trader_id):
         '''Add trade confirmation to confirm_trade_collector list.'''
-        self.confirm_trade_collector.append({'timestamp': timestamp, 'trader': trader_id, 'order_id': order_id, 
+        self.confirm_trade_collector.append({'timestamp': timestamp, "trade_q": trade_q, 'trader': trader_id, 'order_id': order_id, 
                                              'quantity': order_quantity, 'side': order_side, 'price': order_price})
     
 
@@ -155,7 +155,7 @@ class Orderbook(object):
                         ex_id = book[price]['ex_ids'][0]
                         book_order = book[price]['orders'][ex_id]
                         if remainder >= book_order['quantity']:
-                            self._confirm_trade(order['timestamp'], book_order['side'], book_order['quantity'], book_order['order_id'], 
+                            self._confirm_trade(order['timestamp'], book_order["quantity"], book_order['side'], book_order['quantity'], book_order['order_id'], 
                                                 book_order['price'], book_order['trader_id'])
                             self._add_trade_to_book(book_order['trader_id'], book_order['order_id'], book_order['timestamp'],
                                                     order['trader_id'], order['order_id'], order['timestamp'],
@@ -163,7 +163,7 @@ class Orderbook(object):
                             self._remove_order(book_order['side'], book_order['price'], ex_id)
                             remainder -= book_order['quantity']
                         else:
-                            self._confirm_trade(order['timestamp'], book_order['side'], remainder, book_order['order_id'], 
+                            self._confirm_trade(order['timestamp'], remainder, book_order['side'], remainder, book_order['order_id'], 
                                                 book_order['price'], book_order['trader_id'])
                             self._add_trade_to_book(book_order['trader_id'], book_order['order_id'], book_order['timestamp'],
                                                     order['trader_id'], order['order_id'], order['timestamp'],
@@ -188,7 +188,7 @@ class Orderbook(object):
                         ex_id = book[price]['ex_ids'][0]
                         book_order = book[price]['orders'][ex_id] 
                         if remainder >= book_order['quantity']:
-                            self._confirm_trade(order['timestamp'], book_order['side'], book_order['quantity'], book_order['order_id'],
+                            self._confirm_trade(order['timestamp'], book_order["quantity"], book_order['side'], book_order['quantity'], book_order['order_id'],
                                                 book_order['price'], book_order['trader_id'])
                             self._add_trade_to_book(book_order['trader_id'], book_order['order_id'], book_order['timestamp'],
                                                     order['trader_id'], order['order_id'], order['timestamp'],
@@ -196,7 +196,7 @@ class Orderbook(object):
                             self._remove_order(book_order['side'], book_order['price'], ex_id)
                             remainder -= book_order['quantity']
                         else:
-                            self._confirm_trade(order['timestamp'], book_order['side'], remainder, book_order['order_id'], 
+                            self._confirm_trade(order['timestamp'], remainder, book_order['side'], remainder, book_order['order_id'], 
                                                 book_order['price'], book_order['trader_id'])
                             self._add_trade_to_book(book_order['trader_id'], book_order['order_id'], book_order['timestamp'],
                                                     order['trader_id'], order['order_id'], order['timestamp'],
